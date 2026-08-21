@@ -9,7 +9,11 @@
 
 </div>
 
+## Live Demo
+
 [GitHub PagesでDEMO MODEを開く](https://ryohei0otsuka.github.io/trouble-diner/)
+
+公開デモはPHP・MySQL不要で、そのまま操作できます。対応記録・未分類トラブル・追加クエストは閲覧者自身のブラウザにだけ保存され、集計画面から初期状態へ戻せます。
 
 ![TROUBLE DINER ホーム画面](docs/screenshots/home.png)
 
@@ -41,17 +45,24 @@
 | `DB CONNECTED` | PHP + MySQL / MariaDB | XAMPPで完全版を検証 |
 | `DEMO MODE` | Browser localStorage | GitHub Pagesなどで操作感を公開 |
 
-GitHub PagesではPHPとMySQLが動かないため、公開デモは`DEMO MODE`で動作します。
-対応記録・未分類トラブル・追加クエストは閲覧者自身のブラウザにだけ保存され、集計画面の「初期状態へ戻す」からリセットできます。
-
 ## Tech Stack
 
 `React 19` `TypeScript 5.9` `Vite 8.2` `PHP 8+` `MySQL / MariaDB` `XAMPP` `PWA`
 
-## Run locally
+## Local Setup
 
-XAMPP・phpMyAdminを含む起動手順は[`docs/SETUP.md`](docs/SETUP.md)にまとめています。
-GitHub Pagesへの公開手順は[`docs/DEPLOY.md`](docs/DEPLOY.md)を参照してください。
+リポジトリを`C:\xampp\htdocs\trouble-diner`へ配置するか、同じパスへのジャンクションを作成します。XAMPPでApacheとMySQLを起動し、phpMyAdminから`database/setup.sql`をインポートした後、リポジトリ直下で実行します。
+
+```powershell
+npm install
+npm run dev
+```
+
+```text
+http://localhost:5173/
+```
+
+`DB CONNECTED`ならMySQL接続版、`DEMO MODE`ならブラウザ内デモで動作しています。公開版は`main`へのPush時にGitHub Actionsから自動更新されます。
 
 ## Safety and Privacy
 
@@ -63,6 +74,8 @@ GitHub Pagesへの公開手順は[`docs/DEPLOY.md`](docs/DEPLOY.md)を参照し�
 本プロジェクトは特定の企業・業務・サービスを再現したものではなく、一般的なトラブル対応業務を題材とした個人PoCです。
 
 掲載内容は模擬練習用であり、実際の緊急対応や食品衛生上の判断を代替しません。
+
+ドット絵素材は本プロジェクト用に生成したオリジナル素材です。
 
 ## License
 

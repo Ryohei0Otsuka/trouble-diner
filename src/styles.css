@@ -26,11 +26,14 @@
 html {
   min-width: 320px;
   background: #f7e7c5;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
   color: var(--ink);
   background:
@@ -51,6 +54,7 @@ textarea {
 button {
   color: inherit;
   cursor: pointer;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -79,7 +83,8 @@ img {
 
 .app-shell {
   min-height: 100vh;
-  padding-bottom: 112px;
+  min-height: 100dvh;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
 }
 
 .screen-wrap {
@@ -103,8 +108,8 @@ img {
   position: sticky;
   top: 0;
   z-index: 50;
-  min-height: 82px;
-  padding: 11px clamp(16px, 4vw, 58px);
+  min-height: calc(82px + env(safe-area-inset-top, 0px));
+  padding: calc(11px + env(safe-area-inset-top, 0px)) clamp(16px, 4vw, 58px) 11px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -116,6 +121,8 @@ img {
 }
 
 .brand-button {
+  min-width: 44px;
+  min-height: 44px;
   display: flex;
   align-items: center;
   gap: 13px;
@@ -259,7 +266,7 @@ img {
 .bottom-nav {
   position: fixed;
   left: 50%;
-  bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   z-index: 45;
   width: min(450px, calc(100% - 28px));
   height: 76px;
@@ -275,6 +282,7 @@ img {
 }
 
 .bottom-nav button {
+  min-height: 56px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1626,6 +1634,8 @@ img {
 .log-table-wrap {
   overflow-x: auto;
   padding: 9px 20px 20px;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -1952,7 +1962,7 @@ td strong {
   }
 
   .app-shell {
-    padding-bottom: 100px;
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
 
   .screen-wrap {
@@ -1961,8 +1971,8 @@ td strong {
   }
 
   .app-header {
-    min-height: 68px;
-    padding: 8px 11px;
+    min-height: calc(72px + env(safe-area-inset-top, 0px));
+    padding: calc(8px + env(safe-area-inset-top, 0px)) 11px 8px;
     gap: 8px;
   }
 
@@ -1995,7 +2005,7 @@ td strong {
   .source-badge {
     min-height: 34px;
     padding: 0 9px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .demo-ribbon {
@@ -2008,14 +2018,14 @@ td strong {
   }
 
   .mode-switch select {
-    width: 100px;
-    min-height: 34px;
+    width: 112px;
+    min-height: 44px;
     padding-left: 9px;
-    font-size: 10px;
+    font-size: 16px;
   }
 
   .bottom-nav {
-    bottom: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     height: 72px;
     border-radius: 24px;
   }
@@ -2078,7 +2088,7 @@ td strong {
   }
 
   .area-copy small {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .area-copy strong {
@@ -2210,6 +2220,46 @@ td strong {
     font-size: 34px;
   }
 
+  .dashboard-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .dashboard-title h1,
+  .editor-title h1 {
+    font-size: 30px;
+  }
+
+  .dashboard-title p:last-child,
+  .editor-title p:last-child {
+    font-size: 14px;
+  }
+
+  .dashboard-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .dashboard-actions button {
+    min-width: 0;
+    flex: 1 1 140px;
+  }
+
+  .editor-title {
+    position: relative;
+    min-height: 116px;
+    padding-right: 100px;
+    display: block;
+  }
+
+  .editor-title > img {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 92px;
+  }
+
   .pixel-window > header,
   .editor-form > header {
     padding: 16px;
@@ -2229,8 +2279,71 @@ td strong {
     gap: 3px;
   }
 
+  .log-table-wrap {
+    overflow: visible;
+    padding: 12px;
+  }
+
+  .history-window table,
+  .history-window tbody,
+  .history-window tr,
+  .history-window td {
+    width: 100%;
+    min-width: 0;
+    display: block;
+  }
+
+  .history-window thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .history-window tbody {
+    display: grid;
+    gap: 11px;
+  }
+
+  .history-window tr {
+    padding: 12px 14px;
+    border: 1px solid var(--soft-line);
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 7px 16px rgba(62, 47, 43, 0.08);
+  }
+
+  .history-window td {
+    padding: 5px 0;
+    display: grid;
+    grid-template-columns: 76px minmax(0, 1fr);
+    align-items: start;
+    gap: 8px;
+    border: 0;
+    font-size: 13px;
+  }
+
+  .history-window td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 900;
+  }
+
+  .note-field textarea,
+  .mystery-card textarea,
+  .mystery-card input,
+  .editor-form input,
+  .editor-form select,
+  .editor-form textarea {
+    font-size: 16px;
+  }
+
   .editor-title > img {
-    width: 112px;
+    width: 92px;
   }
 
   .form-grid {
@@ -2289,11 +2402,34 @@ td strong {
   }
 
   .hero-copy h1 {
-    font-size: 29px;
+    font-size: clamp(26px, 7.4vw, 29px);
+  }
+
+  .hero-copy {
+    position: relative;
+    min-height: 205px;
+    padding: 20px 15px;
+    align-items: flex-start;
+  }
+
+  .hero-copy > div {
+    position: relative;
+    z-index: 1;
+    width: 68%;
+  }
+
+  .hero-copy p:last-child {
+    max-width: 185px;
+    font-size: 12px;
   }
 
   .hero-mascot {
-    width: 118px;
+    position: absolute;
+    right: -3px;
+    bottom: 0;
+    width: 108px;
+    max-height: 150px;
+    margin: 0;
   }
 
   .area-card {
@@ -2311,6 +2447,52 @@ td strong {
 
   .metric-card strong {
     font-size: 31px;
+  }
+}
+
+@media (max-width: 360px) {
+  .screen-wrap,
+  .demo-ribbon {
+    width: calc(100% - 16px);
+  }
+
+  .app-header {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
+  .source-badge {
+    padding: 0 7px;
+    font-size: 10px;
+  }
+
+  .mode-switch select {
+    width: 106px;
+  }
+
+  .hero-copy > div {
+    width: 72%;
+  }
+
+  .hero-mascot {
+    right: -8px;
+    width: 98px;
+  }
+
+  .area-grid {
+    gap: 8px;
+  }
+
+  .area-card {
+    min-height: 94px;
+    padding: 12px 9px;
+    grid-template-columns: 39px 1fr;
+    gap: 8px;
+  }
+
+  .area-icon {
+    width: 39px;
+    height: 39px;
   }
 }
 

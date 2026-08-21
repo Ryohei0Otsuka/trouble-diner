@@ -40,7 +40,21 @@ export function Dashboard({ data, source, onRefresh, onResetDemo }: Props) {
 
       <article className="pixel-window history-window">
         <header><div><span>RECENT LOG</span><h2>最近のクエストログ</h2></div></header>
-        <div className="log-table-wrap"><table><thead><tr><th>日時</th><th>エリア</th><th>トラブル</th><th>結果</th><th>時間</th><th>再発</th></tr></thead><tbody>{data.recent.map((item) => <tr key={item.id}><td>{formatDate(item.occurredAt)}</td><td>{item.areaName}</td><td><strong>{item.scenarioTitle}</strong></td><td><span className={`result-chip ${item.result}`}>{resultLabels[item.result]}</span></td><td>{Math.max(1, Math.round(item.durationSeconds / 60))}分</td><td>{item.recurrence ? <b className="repeat-chip">REPEAT</b> : "—"}</td></tr>)}</tbody></table></div>
+        <div className="log-table-wrap">
+          <table>
+            <thead><tr><th>日時</th><th>エリア</th><th>トラブル</th><th>結果</th><th>時間</th><th>再発</th></tr></thead>
+            <tbody>{data.recent.map((item) => (
+              <tr key={item.id}>
+                <td data-label="日時">{formatDate(item.occurredAt)}</td>
+                <td data-label="エリア">{item.areaName}</td>
+                <td data-label="トラブル"><strong>{item.scenarioTitle}</strong></td>
+                <td data-label="結果"><span className={`result-chip ${item.result}`}>{resultLabels[item.result]}</span></td>
+                <td data-label="時間">{Math.max(1, Math.round(item.durationSeconds / 60))}分</td>
+                <td data-label="再発">{item.recurrence ? <b className="repeat-chip">REPEAT</b> : "—"}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
       </article>
     </section>
   );
