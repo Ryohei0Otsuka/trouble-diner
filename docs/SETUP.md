@@ -49,6 +49,12 @@ npm run dev
 
 [http://localhost:5173/](http://localhost:5173/)を開きます。画面右上が`DB CONNECTED`なら完全版、`DEMO MODE`ならブラウザ内デモで動作しています。
 
+APIへ接続せず、GitHub Pagesと同じデモ動作だけをローカル確認する場合：
+
+```powershell
+npm run dev:demo
+```
+
 ## 4. Production build
 
 ```powershell

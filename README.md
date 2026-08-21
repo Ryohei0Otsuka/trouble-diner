@@ -9,6 +9,8 @@
 
 </div>
 
+[GitHub PagesでDEMO MODEを開く](https://ryohei0otsuka.github.io/trouble-diner/)
+
 ![TROUBLE DINER ホーム画面](docs/screenshots/home.png)
 
 ## About
@@ -40,6 +42,7 @@
 | `DEMO MODE` | Browser localStorage | GitHub Pagesなどで操作感を公開 |
 
 GitHub PagesではPHPとMySQLが動かないため、公開デモは`DEMO MODE`で動作します。
+対応記録・未分類トラブル・追加クエストは閲覧者自身のブラウザにだけ保存され、集計画面の「初期状態へ戻す」からリセットできます。
 
 ## Tech Stack
 
@@ -48,6 +51,7 @@ GitHub PagesではPHPとMySQLが動かないため、公開デモは`DEMO MODE`�
 ## Run locally
 
 XAMPP・phpMyAdminを含む起動手順は[`docs/SETUP.md`](docs/SETUP.md)にまとめています。
+GitHub Pagesへの公開手順は[`docs/DEPLOY.md`](docs/DEPLOY.md)を参照してください。
 
 ## Safety and Privacy
 

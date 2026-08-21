@@ -1,8 +1,9 @@
-const CACHE = "trouble-diner-v1";
+const CACHE = "trouble-diner-v2-pop-demo";
 const CORE = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
+  "./assets/favicon.png",
   "./assets/icon-192.png",
   "./assets/icon-512.png",
   "./assets/crew-mascot.png",

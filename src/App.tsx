@@ -7,7 +7,7 @@ import { HomeScreen } from "./components/HomeScreen";
 import { ScenarioEditor } from "./components/ScenarioEditor";
 import { ScenarioList } from "./components/ScenarioList";
 import { UnclassifiedForm } from "./components/UnclassifiedForm";
-import { loadBootstrap, refreshDashboard } from "./lib/api";
+import { loadBootstrap, refreshDashboard, resetDemoData } from "./lib/api";
 import type { AppMode, Area, BootstrapData, Scenario } from "./types";
 
 type Screen = "home" | "scenarios" | "flow" | "dashboard" | "editor" | "unclassified";
@@ -44,6 +44,13 @@ export default function App() {
   const scenarioCreated = (scenario: Scenario) => {
     setData((current) => current ? { ...current, scenarios: [scenario, ...current.scenarios] } : current);
   };
+  const resetDemo = async () => {
+    if (!window.confirm("このブラウザに保存したデモ記録・追加クエストを初期状態へ戻しますか？")) return;
+    resetDemoData();
+    localStorage.removeItem("trouble-diner:xp");
+    setXp(0);
+    setData(await loadBootstrap());
+  };
   const navChange = (next: NavScreen) => { setScreen(next); setSelectedScenario(null); window.scrollTo({ top: 0, behavior: "smooth" }); };
 
   if (!data) {
@@ -54,10 +61,12 @@ export default function App() {
     <main className="app-shell">
       <AppHeader mode={mode} source={data.dataSource} xp={xp} onModeChange={changeMode} onHome={goHome} />
 
+      {data.dataSource === "demo" && <aside className="demo-ribbon"><strong>DEMO MODE</strong><span>対応記録と追加クエストは、このブラウザ内にだけ保存されます。</span></aside>}
+
       {screen === "home" && <HomeScreen areas={data.areas} scenarios={data.scenarios} onSelectArea={selectArea} />}
       {screen === "scenarios" && selectedArea && <ScenarioList area={selectedArea} scenarios={areaScenarios} onBack={goHome} onStart={startScenario} onUnclassified={() => setScreen("unclassified")} />}
       {screen === "flow" && selectedArea && selectedScenario && <FlowRunner key={`${selectedScenario.id}-${mode}`} area={selectedArea} scenario={selectedScenario} mode={mode} onExit={() => setScreen("scenarios")} onComplete={completeFlow} />}
-      {screen === "dashboard" && <Dashboard data={data.dashboard} onRefresh={updateDashboard} />}
+      {screen === "dashboard" && <Dashboard data={data.dashboard} source={data.dataSource} onRefresh={updateDashboard} onResetDemo={resetDemo} />}
       {screen === "editor" && <ScenarioEditor areas={data.areas} onCreated={scenarioCreated} />}
       {screen === "unclassified" && selectedArea && <UnclassifiedForm area={selectedArea} onBack={() => setScreen("scenarios")} onSaved={async () => { await updateDashboard(); setScreen("dashboard"); }} />}
 

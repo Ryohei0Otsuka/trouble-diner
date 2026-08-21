@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:demo": "vite --mode demo",
     "build": "tsc --noEmit -p tsconfig.app.json && vite build",
+    "build:pages": "tsc --noEmit -p tsconfig.app.json && vite build --mode demo --base=/trouble-diner/",
     "preview": "vite preview"
   },
   "dependencies": {

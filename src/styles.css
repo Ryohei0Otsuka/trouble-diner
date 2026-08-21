@@ -228,6 +228,32 @@ img {
   font-weight: 900;
 }
 
+.demo-ribbon {
+  width: min(1160px, calc(100% - 40px));
+  margin: 16px auto -22px;
+  padding: 11px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #654700;
+  border: 1px solid rgba(209, 153, 30, 0.34);
+  border-radius: 16px;
+  background: rgba(255, 241, 190, 0.9);
+  box-shadow: 0 8px 18px rgba(112, 78, 22, 0.08);
+  font-size: 13px;
+}
+
+.demo-ribbon strong {
+  padding: 3px 8px;
+  color: #fff;
+  border-radius: 999px;
+  background: #dd951d;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
 /* Bottom navigation */
 
 .bottom-nav {
@@ -1356,6 +1382,30 @@ img {
   font-weight: 900;
 }
 
+.dashboard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.demo-reset-button {
+  min-height: 44px;
+  padding: 0 15px;
+  color: #775c35;
+  border: 1px dashed rgba(119, 92, 53, 0.45);
+  border-radius: 999px;
+  background: #fff8e8;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.demo-reset-button:hover {
+  transform: translateY(-2px);
+  background: #fff;
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1946,6 +1996,15 @@ td strong {
     min-height: 34px;
     padding: 0 9px;
     font-size: 10px;
+  }
+
+  .demo-ribbon {
+    width: min(100% - 22px, 1160px);
+    margin: 11px auto -16px;
+    align-items: flex-start;
+    padding: 10px 12px;
+    font-size: 11px;
+    line-height: 1.55;
   }
 
   .mode-switch select {

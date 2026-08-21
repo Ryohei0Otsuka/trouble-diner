@@ -1,15 +1,20 @@
 import type { DashboardData, OutcomeType } from "../types";
 
-interface Props { data: DashboardData; onRefresh: () => void; }
+interface Props {
+  data: DashboardData;
+  source: "mysql" | "demo";
+  onRefresh: () => void;
+  onResetDemo: () => void;
+}
 
 const resultLabels: Record<OutcomeType, string> = { resolved: "一次解決", escalated: "引継ぎ", stopped: "使用停止", unclassified: "未分類" };
 const formatDate = (value: string) => new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 
-export function Dashboard({ data, onRefresh }: Props) {
+export function Dashboard({ data, source, onRefresh, onResetDemo }: Props) {
   const maxScore = data.priorities[0]?.score || 1;
   return (
     <section className="dashboard-screen screen-wrap">
-      <div className="dashboard-title"><div><p className="pixel-kicker">QUEST ANALYTICS</p><h1>お店の攻略データ</h1><p>件数だけでなく、影響度・時間・再発性から改善対象を探します。</p></div><button className="refresh-button" onClick={onRefresh}>↻ 更新</button></div>
+      <div className="dashboard-title"><div><p className="pixel-kicker">QUEST ANALYTICS</p><h1>お店の攻略データ</h1><p>件数だけでなく、影響度・時間・再発性から改善対象を探します。</p></div><div className="dashboard-actions"><button className="refresh-button" onClick={onRefresh}>↻ 更新</button>{source === "demo" && <button className="demo-reset-button" onClick={onResetDemo}>初期状態へ戻す</button>}</div></div>
 
       <div className="metric-grid">
         <article className="metric-card red"><span>ALL QUESTS</span><strong>{data.total}</strong><small>総対応件数</small></article>
