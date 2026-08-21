@@ -62,7 +62,7 @@ npm run dev
 http://localhost:5173/
 ```
 
-`DB CONNECTED`ならMySQL接続版、`DEMO MODE`ならブラウザ内デモで動作しています。公開版は`main`へのPush時にGitHub Actionsから自動更新されます。
+`DB CONNECTED`ならMySQL接続版、`DEMO MODE`ならブラウザ内デモで動作しています。
 
 ## Safety and Privacy
 
