@@ -1,4 +1,4 @@
-const CACHE = "trouble-diner-v2-pop-demo";
+const CACHE = "trouble-diner-v3-focus-flow";
 const CORE = [
   "./",
   "./index.html",

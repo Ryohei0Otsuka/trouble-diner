@@ -111,12 +111,12 @@ export const demoScenarios: Scenario[] = [
 ];
 
 const recent: RecentIncident[] = [
-  { id: "d1", occurredAt: "2026-08-22T10:42:00+09:00", areaName: "レジ", scenarioTitle: "POSレジが操作できない", result: "escalated", severity: "high", durationSeconds: 780, recurrence: true },
-  { id: "d2", occurredAt: "2026-08-22T09:18:00+09:00", areaName: "ホール", scenarioTitle: "注文と違う料理を提供した", result: "resolved", severity: "medium", durationSeconds: 310, recurrence: false },
+  { id: "d1", occurredAt: "2026-08-22T10:42:00+09:00", areaName: "レジ", scenarioTitle: "POSレジが操作できない", result: "escalated", severity: "medium", durationSeconds: 780, recurrence: true },
+  { id: "d2", occurredAt: "2026-08-22T09:18:00+09:00", areaName: "ホール", scenarioTitle: "注文と違う料理を提供した", result: "resolved", severity: "low", durationSeconds: 310, recurrence: false },
   { id: "d3", occurredAt: "2026-08-21T19:37:00+09:00", areaName: "キッチン", scenarioTitle: "冷蔵設備に異常表示が出た", result: "stopped", severity: "high", durationSeconds: 1020, recurrence: true },
   { id: "d4", occurredAt: "2026-08-21T17:04:00+09:00", areaName: "受取口", scenarioTitle: "持ち帰り商品と注文内容が違う", result: "resolved", severity: "low", durationSeconds: 240, recurrence: false },
   { id: "d5", occurredAt: "2026-08-20T12:26:00+09:00", areaName: "スタッフ", scenarioTitle: "急な欠勤で人員が不足した", result: "escalated", severity: "medium", durationSeconds: 900, recurrence: false },
-  { id: "d6", occurredAt: "2026-08-20T11:13:00+09:00", areaName: "ホール", scenarioTitle: "料理の提供が大幅に遅れている", result: "resolved", severity: "medium", durationSeconds: 480, recurrence: true },
+  { id: "d6", occurredAt: "2026-08-20T11:13:00+09:00", areaName: "ホール", scenarioTitle: "料理の提供が大幅に遅れている", result: "resolved", severity: "low", durationSeconds: 480, recurrence: true },
 ];
 
 export const demoBootstrap: BootstrapData = {
@@ -131,10 +131,10 @@ export const demoBootstrap: BootstrapData = {
     unclassifiedCount: 3,
     priorities: [
       { scenarioTitle: "冷蔵設備に異常表示が出た", areaName: "キッチン", count: 3, score: 243 },
-      { scenarioTitle: "POSレジが操作できない", areaName: "レジ", count: 4, score: 196 },
-      { scenarioTitle: "料理の提供が大幅に遅れている", areaName: "ホール", count: 5, score: 152 },
+      { scenarioTitle: "POSレジが操作できない", areaName: "レジ", count: 4, score: 154 },
+      { scenarioTitle: "料理の提供が大幅に遅れている", areaName: "ホール", count: 5, score: 112 },
       { scenarioTitle: "急な欠勤で人員が不足した", areaName: "スタッフ", count: 2, score: 118 },
-      { scenarioTitle: "注文と違う料理を提供した", areaName: "ホール", count: 4, score: 92 },
+      { scenarioTitle: "注文と違う料理を提供した", areaName: "ホール", count: 4, score: 64 },
     ],
     recent,
   },

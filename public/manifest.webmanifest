@@ -1,7 +1,7 @@
 {
   "name": "TROUBLE DINER",
   "short_name": "T-DINER",
-  "description": "飲食店トラブル対応をクエスト化し、判断・記録・改善をつなぐ個人PoC。",
+  "description": "1画面1判断の対応フローと記録・集計で、飲食店トラブル対応を支える個人PoC。",
   "lang": "ja",
   "start_url": "./",
   "scope": "./",

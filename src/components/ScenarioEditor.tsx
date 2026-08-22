@@ -27,12 +27,12 @@ export function ScenarioEditor({ areas, onCreated }: Props) {
 
   return (
     <section className="editor-screen screen-wrap">
-      <div className="editor-title"><div><p className="pixel-kicker">QUEST MAKER</p><h1>新しい対応を追加</h1><p>未分類トラブルを、次回から迷わない小さなフローへ変えます。</p></div><img src="./assets/crew-mascot.png" alt="クエスト作成を手伝うクルー" /></div>
+      <div className="editor-title"><div><p className="pixel-kicker">FLOW MAKER</p><h1>新しい対応を追加</h1><p>未分類トラブルを、次回から迷わない小さなフローへ変えます。</p></div><img src="./assets/crew-mascot.png" alt="フロー作成を手伝うクルー" /></div>
       <form className="editor-form pixel-window" onSubmit={submit}>
-        <header><div><span>FLOW VERSION 1</span><h2>1問から始めるクエスト</h2></div><small>後から分岐を増やせます</small></header>
+        <header><div><span>FLOW VERSION 1</span><h2>YES／NOの最小構成</h2></div><small>1画面1判断</small></header>
         <div className="form-grid">
           <label><span>発生エリア</span><select value={form.areaId} onChange={(event) => update("areaId", Number(event.target.value))}>{areas.map((area) => <option value={area.id} key={area.id}>{area.name}</option>)}</select></label>
-          <label><span>危険度</span><select value={form.riskLevel} onChange={(event) => update("riskLevel", event.target.value as RiskLevel)}><option value="normal">NORMAL</option><option value="caution">CAUTION</option><option value="critical">STOP RULE</option></select></label>
+          <label><span>フローの安全区分</span><select value={form.riskLevel} onChange={(event) => update("riskLevel", event.target.value as RiskLevel)}><option value="normal">通常</option><option value="caution">注意・責任者確認</option><option value="critical">停止基準あり</option></select></label>
           <label className="wide"><span>トラブル名 *</span><input value={form.title} onChange={(event) => update("title", event.target.value)} placeholder="例：予約台帳と来店人数が合わない" /></label>
           <label className="wide"><span>説明</span><input value={form.summary} onChange={(event) => update("summary", event.target.value)} placeholder="このフローで減らしたい迷い" /></label>
         </div>
@@ -47,10 +47,10 @@ export function ScenarioEditor({ areas, onCreated }: Props) {
           <label className="route-input"><span>NOの場合の連携先</span><input value={form.escalationTarget} onChange={(event) => update("escalationTarget", event.target.value)} /></label>
         </div>
 
-        <button className="pixel-primary editor-submit" type="submit" disabled={!valid || saving}>{saving ? "SAVING..." : "+ クエストを登録"}</button>
-        {created && <p className="created-toast">★ NEW QUEST ADDED!</p>}
+        <button className="pixel-primary editor-submit" type="submit" disabled={!valid || saving}>{saving ? "SAVING..." : "+ 対応フローを登録"}</button>
+        {created && <p className="created-toast" role="status">✓ 対応フローを追加しました</p>}
       </form>
-      <div className="editor-note"><span>NOTE</span><p>この簡易エディタは最初の1分岐を登録します。DBは複数ノードを扱えるため、今後はドラッグ式のフロー編集へ拡張できます。</p></div>
+      <div className="editor-note"><span>登録範囲</span><p>この画面では最初の質問と、YES／NO後の対応を登録します。安全区分はフロー設計者が設定し、実行時の対応レベルは結果から自動判定します。</p></div>
     </section>
   );
 }

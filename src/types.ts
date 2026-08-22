@@ -2,7 +2,6 @@ export type RiskLevel = "normal" | "caution" | "critical";
 export type NodeType = "question" | "action" | "outcome";
 export type OutcomeType = "resolved" | "escalated" | "stopped" | "unclassified";
 export type Severity = "low" | "medium" | "high";
-export type AppMode = "training" | "mock-live";
 
 export interface Area {
   id: number;
@@ -56,7 +55,6 @@ export interface StepLog {
 export interface IncidentInput {
   scenarioId: number | null;
   areaId: number;
-  mode: AppMode;
   severity: Severity;
   result: OutcomeType;
   recurrence: boolean;

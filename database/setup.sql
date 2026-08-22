@@ -70,7 +70,6 @@ CREATE TABLE IF NOT EXISTS incidents (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   scenario_id INT UNSIGNED NULL,
   area_id INT UNSIGNED NOT NULL,
-  mode ENUM('training','mock-live') NOT NULL DEFAULT 'training',
   severity ENUM('low','medium','high') NOT NULL DEFAULT 'medium',
   result ENUM('resolved','escalated','stopped','unclassified') NOT NULL,
   recurrence TINYINT(1) NOT NULL DEFAULT 0,
@@ -213,17 +212,17 @@ INSERT INTO flow_choices (node_id, label, next_node_key, choice_type, sort_order
   (1001,'ある・不明','danger','positive',1),(1001,'ない','range','negative',2),(1002,'はい','facility','positive',1),(1002,'いいえ','single','negative',2)
 ON DUPLICATE KEY UPDATE label=VALUES(label), next_node_key=VALUES(next_node_key), choice_type=VALUES(choice_type);
 
-INSERT INTO incidents (scenario_id, area_id, mode, severity, result, recurrence, duration_seconds, note, seed_key, occurred_at) VALUES
-  (3,3,'training','high','escalated',1,780,'模擬データ','demo-01','2026-08-22 10:42:00'),
-  (1,1,'training','medium','resolved',0,310,'模擬データ','demo-02','2026-08-22 09:18:00'),
-  (5,2,'training','high','stopped',1,1020,'模擬データ','demo-03','2026-08-21 19:37:00'),
-  (7,5,'training','low','resolved',0,240,'模擬データ','demo-04','2026-08-21 17:04:00'),
-  (8,7,'training','medium','escalated',0,900,'模擬データ','demo-05','2026-08-20 12:26:00'),
-  (2,1,'training','medium','resolved',1,480,'模擬データ','demo-06','2026-08-20 11:13:00'),
-  (3,3,'training','medium','resolved',0,360,'模擬データ','demo-07','2026-08-19 18:10:00'),
-  (5,2,'training','high','stopped',0,850,'模擬データ','demo-08','2026-08-19 15:05:00'),
-  (2,1,'training','low','resolved',1,420,'模擬データ','demo-09','2026-08-18 13:42:00'),
-  (1,1,'training','medium','resolved',0,290,'模擬データ','demo-10','2026-08-18 11:22:00')
+INSERT INTO incidents (scenario_id, area_id, severity, result, recurrence, duration_seconds, note, seed_key, occurred_at) VALUES
+  (3,3,'medium','escalated',1,780,'模擬データ','demo-01','2026-08-22 10:42:00'),
+  (1,1,'low','resolved',0,310,'模擬データ','demo-02','2026-08-22 09:18:00'),
+  (5,2,'high','stopped',1,1020,'模擬データ','demo-03','2026-08-21 19:37:00'),
+  (7,5,'low','resolved',0,240,'模擬データ','demo-04','2026-08-21 17:04:00'),
+  (8,7,'medium','escalated',0,900,'模擬データ','demo-05','2026-08-20 12:26:00'),
+  (2,1,'low','resolved',1,480,'模擬データ','demo-06','2026-08-20 11:13:00'),
+  (3,3,'medium','resolved',0,360,'模擬データ','demo-07','2026-08-19 18:10:00'),
+  (5,2,'high','stopped',0,850,'模擬データ','demo-08','2026-08-19 15:05:00'),
+  (2,1,'low','resolved',1,420,'模擬データ','demo-09','2026-08-18 13:42:00'),
+  (1,1,'low','resolved',0,290,'模擬データ','demo-10','2026-08-18 11:22:00')
 ON DUPLICATE KEY UPDATE scenario_id=VALUES(scenario_id), area_id=VALUES(area_id), severity=VALUES(severity), result=VALUES(result), recurrence=VALUES(recurrence), duration_seconds=VALUES(duration_seconds), occurred_at=VALUES(occurred_at);
 
 INSERT INTO unclassified_reports (area_id, title, details, safety_concern, status, seed_key, occurred_at) VALUES

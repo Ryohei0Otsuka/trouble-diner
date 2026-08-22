@@ -21,7 +21,7 @@ export function HomeScreen({ areas, scenarios, onSelectArea }: Props) {
   return (
     <section className="home-screen screen-wrap">
       <div className="hero-copy">
-        <div><p className="pixel-kicker">SELECT AREA</p><h1>お店のどこで<br />トラブル発生？</h1><p>エリアをタップして、対応クエストを開始しよう。</p></div>
+        <div><p className="pixel-kicker">SELECT AREA</p><h1>お店のどこで<br />トラブル発生？</h1><p>エリアをタップして、対応フローを開始しよう。</p></div>
         <img className="hero-mascot" src="./assets/crew-mascot.png" alt="クリップボードを持つクルー" />
       </div>
 
@@ -40,12 +40,13 @@ export function HomeScreen({ areas, scenarios, onSelectArea }: Props) {
         ))}
       </div>
 
+      <div className="area-list-heading"><span>AREA LIST</span><strong>一覧から選ぶ</strong></div>
       <div className="area-grid">
         {areas.map((area) => (
           <button key={area.id} className="area-card" style={{ "--area-color": area.color } as React.CSSProperties} onClick={() => onSelectArea(area)}>
             <span className="area-icon">{area.icon}</span>
             <span className="area-copy"><small>{area.shortName}</small><strong>{area.name}</strong><em>{area.description}</em></span>
-            <span className="quest-count">{scenarios.filter((item) => item.areaId === area.id).length}<small>QUEST</small></span>
+            <span className="quest-count">{scenarios.filter((item) => item.areaId === area.id).length}<small>FLOW</small></span>
           </button>
         ))}
       </div>

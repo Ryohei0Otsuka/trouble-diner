@@ -1,30 +1,19 @@
-import type { AppMode } from "../types";
-
 interface Props {
-  mode: AppMode;
   source: "mysql" | "demo";
-  xp: number;
-  onModeChange: (mode: AppMode) => void;
+  focusMode: boolean;
   onHome: () => void;
 }
 
-export function AppHeader({ mode, source, xp, onModeChange, onHome }: Props) {
+export function AppHeader({ source, focusMode, onHome }: Props) {
   return (
-    <header className="app-header">
-      <button className="brand-button" onClick={onHome} aria-label="ホームへ戻る">
+    <header className={`app-header ${focusMode ? "focus-mode" : ""}`}>
+      <button className="brand-button" onClick={onHome} disabled={focusMode} aria-label={focusMode ? "対応中" : "ホームへ戻る"}>
         <span className="pixel-logo">TD</span>
-        <span><strong>TROUBLE DINER</strong><small>RESTAURANT SUPPORT QUEST</small></span>
+        <span><strong>TROUBLE DINER</strong><small>RESTAURANT SUPPORT FLOW</small></span>
       </button>
       <div className="header-status">
         <div className={`source-badge ${source}`}><i />{source === "mysql" ? "DB CONNECTED" : "DEMO MODE"}</div>
-        <div className="xp-badge"><span>★</span><b>{xp}</b> EXP</div>
-        <label className="mode-switch">
-          <span>MODE</span>
-          <select value={mode} onChange={(event) => onModeChange(event.target.value as AppMode)}>
-            <option value="training">TRAINING</option>
-            <option value="mock-live">LIVE MOCK</option>
-          </select>
-        </label>
+        {focusMode && <div className="focus-badge"><i />対応中</div>}
       </div>
     </header>
   );

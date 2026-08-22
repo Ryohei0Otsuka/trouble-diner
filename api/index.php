@@ -58,6 +58,13 @@ function requiredString(array $input, string $key, int $max = 255): string
     return $value;
 }
 
+function derivedSeverity(string $risk, string $result): string
+{
+    if ($risk === 'critical' || $result === 'stopped') return 'high';
+    if ($risk === 'caution' || in_array($result, ['escalated', 'unclassified'], true)) return 'medium';
+    return 'low';
+}
+
 function dashboard(PDO $pdo): array
 {
     $summary = $pdo->query(
@@ -182,20 +189,28 @@ function bootstrap(PDO $pdo): array
 
 function saveIncident(PDO $pdo, array $input): array
 {
-    $mode = in_array($input['mode'] ?? '', ['training', 'mock-live'], true) ? $input['mode'] : 'training';
-    $severity = in_array($input['severity'] ?? '', ['low', 'medium', 'high'], true) ? $input['severity'] : 'medium';
     $result = in_array($input['result'] ?? '', ['resolved', 'escalated', 'stopped', 'unclassified'], true) ? $input['result'] : 'unclassified';
     $scenarioId = isset($input['scenarioId']) ? (int)$input['scenarioId'] : null;
     $areaId = (int)($input['areaId'] ?? 0);
     if ($areaId < 1) fail('areaId が正しくありません。');
+    $risk = 'normal';
+    if ($scenarioId !== null && $scenarioId > 0) {
+        $scenarioStmt = $pdo->prepare('SELECT area_id, risk_level FROM scenarios WHERE id = ?');
+        $scenarioStmt->execute([$scenarioId]);
+        $scenario = $scenarioStmt->fetch();
+        if (!$scenario) fail('scenarioId が正しくありません。');
+        if ((int)$scenario['area_id'] !== $areaId) fail('シナリオとエリアが一致しません。');
+        $risk = (string)$scenario['risk_level'];
+    }
+    $severity = derivedSeverity($risk, $result);
     $duration = max(1, min(86400, (int)($input['durationSeconds'] ?? 1)));
     $note = mb_substr(trim((string)($input['note'] ?? '')), 0, 2000);
     $steps = is_array($input['steps'] ?? null) ? $input['steps'] : [];
 
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('INSERT INTO incidents (scenario_id, area_id, mode, severity, result, recurrence, duration_seconds, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$scenarioId, $areaId, $mode, $severity, $result, !empty($input['recurrence']) ? 1 : 0, $duration, $note]);
+        $stmt = $pdo->prepare('INSERT INTO incidents (scenario_id, area_id, severity, result, recurrence, duration_seconds, note) VALUES (?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$scenarioId, $areaId, $severity, $result, !empty($input['recurrence']) ? 1 : 0, $duration, $note]);
         $incidentId = (int)$pdo->lastInsertId();
 
         $stepStmt = $pdo->prepare('INSERT INTO incident_steps (incident_id, node_key, prompt, choice_label, step_order) VALUES (?, ?, ?, ?, ?)');

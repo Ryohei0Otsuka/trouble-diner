@@ -10,6 +10,11 @@ export function UnclassifiedForm({ area, onBack, onSaved }: Props) {
   const [safetyConcern, setSafetyConcern] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const requestBack = () => {
+    const hasInput = title.trim() || details.trim() || safetyConcern;
+    if (!hasInput || window.confirm("入力内容を破棄してフロー一覧へ戻りますか？")) onBack();
+  };
+
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!title.trim()) return;
@@ -21,7 +26,7 @@ export function UnclassifiedForm({ area, onBack, onSaved }: Props) {
 
   return (
     <section className="unclassified-screen screen-wrap">
-      <button className="pixel-back" onClick={onBack}>← クエスト一覧</button>
+      <button className="pixel-back" onClick={requestBack}>← フロー一覧</button>
       <div className="mystery-card pixel-window">
         <div className="mystery-icon">?</div><p className="pixel-kicker">UNKNOWN EVENT</p><h1>予定外トラブルを記録</h1>
         <p>解決を急いで推測せず、起きている事実を未分類ボックスへ残します。</p>
