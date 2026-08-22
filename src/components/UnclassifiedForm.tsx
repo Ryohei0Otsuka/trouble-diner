@@ -44,7 +44,7 @@ export function UnclassifiedForm({ area, onBack, onSaved }: Props) {
   const copyTicket = async () => {
     if (!saved) return;
     const text = [
-      "【TROUBLE DINER｜未分類トラブル連絡票】",
+      "【TROUBLE DINER｜未分類トラブル連絡文】",
       `記録ID：${saved.id}`,
       `発生日時：${new Intl.DateTimeFormat("ja-JP", { dateStyle: "medium", timeStyle: "short" }).format(new Date(saved.occurredAt))}`,
       `エリア：${saved.areaName}`,
@@ -66,7 +66,7 @@ export function UnclassifiedForm({ area, onBack, onSaved }: Props) {
           <p className="pixel-kicker">UNKNOWN #{saved.id}</p>
           <h1>{saved.safetyConcern ? "安全懸念として記録" : "未分類として記録"}</h1>
           <p>{saved.safetyConcern ? "集計画面の「今すぐ見るもの」に残しました。緊急手順を優先して責任者へ連携してください。" : "未分類ボックスに残しました。同じ事象が重なったら新しいフロー候補になります。"}</p>
-          <button className="copy-ticket" onClick={copyTicket}>{copied ? "✓ 連絡票をコピーしました" : "▣ 記録ID付き連絡票をコピー"}</button>
+          <div className="ticket-copy-area"><button className="copy-ticket" onClick={copyTicket}>{copied ? "✓ 責任者への連絡文をコピーしました" : "▣ 責任者への連絡文をコピー"}</button><small>Slack・Teams・メールなどへ貼り付けられます</small></div>
           <div className="clear-actions"><button className="pixel-primary" onClick={onSaved}>集計を確認</button><button className="pixel-secondary" onClick={onBack}>フロー一覧</button></div>
         </div>
       </section>
@@ -83,7 +83,7 @@ export function UnclassifiedForm({ area, onBack, onSaved }: Props) {
           <label><span>何が起きていますか？ *</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="短い事実で入力" /></label>
           <label><span>確認したこと・試したこと</span><textarea value={details} onChange={(event) => setDetails(event.target.value)} rows={5} placeholder="誰が、どこで、何を確認したか" /></label>
           <label className="pixel-check"><input type="checkbox" checked={safetyConcern} onChange={(event) => setSafetyConcern(event.target.checked)} /><i />人身・衛生・火災など安全上の懸念がある</label>
-          {safetyConcern && <div className="danger-notice">！操作を続けず、店舗の緊急手順に従って責任者へ連携してください。保存後に記録ID付きの連絡票を作れます。</div>}
+          {safetyConcern && <div className="danger-notice">！操作を続けず、店舗の緊急手順に従って責任者へ連携してください。保存後に記録ID付きの連絡文をコピーできます。</div>}
           <button className="pixel-primary" disabled={!title.trim() || saving}>{saving ? "SAVING..." : safetyConcern ? "安全懸念として記録し、連携へ" : "未分類ボックスへ記録"}</button>
         </form>
       </div>

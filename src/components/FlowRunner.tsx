@@ -90,7 +90,7 @@ export function FlowRunner({ area, scenario, onExit, onComplete }: Props) {
   const escalationText = () => {
     if (!node || node.type !== "outcome" || !saved) return "";
     return [
-      "【TROUBLE DINER｜引継ぎ票】",
+      "【TROUBLE DINER｜責任者への連絡文】",
       `記録ID：${saved.id}`,
       `発生日時：${formatTicketDate(saved.occurredAt)}`,
       `エリア：${area.name}`,
@@ -101,7 +101,7 @@ export function FlowRunner({ area, scenario, onExit, onComplete }: Props) {
       `再発：${recurrence ? "あり" : "なし・不明"}`,
       `確認経路：${routeSummary || "直接判定"}`,
       `補足：${note || "なし"}`,
-      "状態：未復旧（復旧後に集計画面から完了記録）",
+      "状態：対応中（完了後に集計画面から完了記録）",
       "※架空PoCの模擬データです。",
     ].join("\n");
   };
@@ -151,8 +151,8 @@ export function FlowRunner({ area, scenario, onExit, onComplete }: Props) {
         <div className="confetti-pixel p1" /><div className="confetti-pixel p2" /><div className="confetti-pixel p3" />
         <img src="./assets/crew-mascot.png" alt="記録完了を知らせるクルー" />
         <p className="pixel-kicker">RECORD #{saved.id}</p><h1>{needsFollowUp ? "引継ぎ待ち" : "記録しました"}</h1>
-        <p>{needsFollowUp ? "未復旧として集計画面に残しました。引継ぎ票には記録IDと発生日時が入ります。" : "判断経路と一次解決をトラブル記録へ保存しました。"}</p>
-        {needsFollowUp && <button className="copy-ticket saved-ticket" onClick={copyEscalation}>{copied ? "✓ 引継ぎ票をコピーしました" : "▣ 保存済みの引継ぎ票をコピー"}</button>}
+        <p>{needsFollowUp ? "対応中として集計画面に残しました。責任者への連絡文には記録IDと発生日時が入ります。" : "判断経路と一次解決をトラブル記録へ保存しました。"}</p>
+        {needsFollowUp && <div className="ticket-copy-area"><button className="copy-ticket saved-ticket" onClick={copyEscalation}>{copied ? "✓ 責任者への連絡文をコピーしました" : "▣ 責任者への連絡文をコピー"}</button><small>Slack・Teams・メールなどへ貼り付けられます</small></div>}
         <div className="clear-actions"><button className="pixel-primary" onClick={onComplete}>集計を確認</button><button className="pixel-secondary" onClick={onExit}>フロー一覧</button></div>
       </section>
     );
@@ -182,8 +182,8 @@ export function FlowRunner({ area, scenario, onExit, onComplete }: Props) {
               <label className="note-field"><span>補足メモ</span><textarea value={note} onChange={(event) => setNote(event.target.value)} rows={3} placeholder="確認できた事実だけを記録" /></label>
             </div>
 
-            {node.outcomeType !== "resolved" && <p className="save-first-note">先に記録を保存します。記録ID付きの引継ぎ票は保存後にコピーできます。</p>}
-            <button className="pixel-primary record-button" disabled={saving} onClick={complete}>{saving ? "SAVING..." : node.outcomeType === "resolved" ? "一次解決として記録" : "未復旧として記録し、引継ぎへ"}</button>
+            {node.outcomeType !== "resolved" && <p className="save-first-note">先に記録を保存します。記録ID付きの責任者向け連絡文は保存後にコピーできます。</p>}
+            <button className="pixel-primary record-button" disabled={saving} onClick={complete}>{saving ? "SAVING..." : node.outcomeType === "resolved" ? "一次解決として記録" : "対応中として記録し、引継ぎへ"}</button>
           </>
         ) : (
           <>

@@ -328,7 +328,7 @@ function resolveIncident(PDO $pdo, array $input): array
          WHERE id = ? AND status = 'open'"
     );
     $stmt->execute([$resolutionNote, $id]);
-    if ($stmt->rowCount() < 1) fail('未復旧の記録が見つかりません。', 404);
+    if ($stmt->rowCount() < 1) fail('対応中の記録が見つかりません。', 404);
     return ['id' => $id, 'status' => 'resolved'];
 }
 
