@@ -1,5 +1,15 @@
-import { demoBootstrap } from "../data/demo";
-import type { BootstrapData, DashboardData, IncidentInput, NewScenarioInput, PriorityItem, RecentIncident, Scenario } from "../types";
+import { demoBootstrap, demoUnclassified } from "../data/demo";
+import type {
+  BootstrapData,
+  DashboardData,
+  IncidentInput,
+  IncidentRecord,
+  NewScenarioInput,
+  PriorityItem,
+  SavedIncident,
+  Scenario,
+  UnclassifiedRecord,
+} from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL || "/trouble-diner/api/index.php";
 const EXPLICIT_DEMO = import.meta.env.MODE === "demo" || import.meta.env.VITE_DEMO_MODE === "true";
@@ -20,7 +30,7 @@ const writeLocal = <T,>(key: string, value: T) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
-    // プライベートブラウズや容量制限時も画面操作を止めない。
+    // 保存領域が使えなくても、その場の操作は止めない。
   }
 };
 
@@ -35,35 +45,95 @@ async function request<T>(action: string, options?: RequestInit): Promise<T> {
   return payload.data as T;
 }
 
-const localDashboard = (): DashboardData => {
-  const stored = readLocal<RecentIncident[]>(INCIDENT_KEY, []);
-  if (!stored.length) return demoBootstrap.dashboard;
+function normalizeIncident(item: Partial<IncidentRecord> & Record<string, unknown>): IncidentRecord {
+  const legacyDuration = Number(item.durationSeconds || 0);
+  const result = item.result || "unclassified";
+  const occurredAt = item.occurredAt || new Date().toISOString();
+  const status = item.status || (result === "resolved" ? "resolved" : "open");
+  return {
+    id: item.id || `local-${Date.now()}`,
+    occurredAt,
+    areaName: item.areaName || "未設定",
+    scenarioTitle: item.scenarioTitle || "未分類トラブル",
+    result,
+    severity: item.severity || "medium",
+    status,
+    triageSeconds: Number(item.triageSeconds || Math.min(legacyDuration || 60, 300)),
+    recoverySeconds: item.recoverySeconds === null ? null : Number(item.recoverySeconds || (status === "resolved" ? legacyDuration : 0)) || null,
+    recoveredAt: item.recoveredAt || null,
+    recurrence: Boolean(item.recurrence),
+    note: String(item.note || ""),
+    routeSummary: String(item.routeSummary || ""),
+    resolutionNote: String(item.resolutionNote || ""),
+  };
+}
 
+function storedIncidents(): IncidentRecord[] {
+  return readLocal<Array<Partial<IncidentRecord> & Record<string, unknown>>>(INCIDENT_KEY, []).map(normalizeIncident);
+}
+
+function storedUnclassified(): UnclassifiedRecord[] {
+  return readLocal<UnclassifiedRecord[]>(UNCLASSIFIED_KEY, []);
+}
+
+const localDashboard = (): DashboardData => {
+  const stored = storedIncidents();
+  const unclassifiedMap = new Map<number | string, UnclassifiedRecord>(demoUnclassified.map((item) => [item.id, item]));
+  storedUnclassified().forEach((item) => unclassifiedMap.set(item.id, item));
+  const unclassified = [...unclassifiedMap.values()]
+    .filter((item) => item.status === "new" || item.status === "reviewing")
+    .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
   const base = demoBootstrap.dashboard;
   const all = [...stored, ...base.recent].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime());
-  const total = demoBootstrap.dashboard.total + stored.length;
+  const total = base.total + stored.length;
   const resolved = Math.round(base.total * base.resolvedRate / 100) + stored.filter((item) => item.result === "resolved").length;
   const escalated = Math.round(base.total * base.escalationRate / 100) + stored.filter((item) => item.result !== "resolved").length;
-  const averageMinutes = Math.round((base.averageMinutes * base.total + stored.reduce((sum, item) => sum + item.durationSeconds / 60, 0)) / total);
+  const recoveredStored = stored.filter((item) => item.recoverySeconds !== null);
+  const averageRecoveryMinutes = Math.round(
+    (base.averageRecoveryMinutes * base.total + recoveredStored.reduce((sum, item) => sum + (item.recoverySeconds || 0) / 60, 0))
+    / Math.max(1, base.total + recoveredStored.length),
+  );
+  const activeIncidents = stored.filter((item) => item.status === "open");
+  const safety = unclassified.filter((item) => item.safetyConcern).length;
 
   const priorities = new Map<string, PriorityItem>(base.priorities.map((item) => [`${item.areaName}:${item.scenarioTitle}`, { ...item }]));
   stored.forEach((item) => {
     const key = `${item.areaName}:${item.scenarioTitle}`;
-    const current = priorities.get(key) || { scenarioTitle: item.scenarioTitle, areaName: item.areaName, count: 0, score: 0 };
+    const current = priorities.get(key) || { scenarioTitle: item.scenarioTitle, areaName: item.areaName, count: 0, score: 0, stoppedCount: 0, repeatCount: 0, averageRecoveryMinutes: 0 };
     const severityWeight = item.severity === "high" ? 3 : item.severity === "medium" ? 2 : 1;
-    const addedScore = Math.round(severityWeight * Math.max(1, item.durationSeconds / 60) * (item.recurrence ? 1.5 : 1));
-    priorities.set(key, { ...current, count: current.count + 1, score: current.score + addedScore });
+    const elapsedMinutes = item.recoverySeconds !== null
+      ? Math.max(1, item.recoverySeconds / 60)
+      : Math.max(1, (Date.now() - new Date(item.occurredAt).getTime()) / 60000);
+    const addedScore = Math.round(severityWeight * elapsedMinutes * (item.recurrence ? 1.5 : 1));
+    const nextAverage = item.recoverySeconds === null
+      ? current.averageRecoveryMinutes
+      : Math.round((current.averageRecoveryMinutes * current.count + item.recoverySeconds / 60) / Math.max(1, current.count + 1));
+    priorities.set(key, {
+      ...current,
+      count: current.count + 1,
+      score: current.score + addedScore,
+      stoppedCount: current.stoppedCount + (item.result === "stopped" ? 1 : 0),
+      repeatCount: current.repeatCount + (item.recurrence ? 1 : 0),
+      averageRecoveryMinutes: nextAverage,
+    });
   });
 
   return {
-    ...base,
     total,
-    resolvedRate: Math.round((resolved / total) * 100),
-    escalationRate: Math.round((escalated / total) * 100),
-    averageMinutes,
-    unclassifiedCount: base.unclassifiedCount + readLocal<unknown[]>(UNCLASSIFIED_KEY, []).length,
+    resolvedRate: Math.round((resolved / Math.max(1, total)) * 100),
+    escalationRate: Math.round((escalated / Math.max(1, total)) * 100),
+    averageRecoveryMinutes,
+    unclassifiedCount: unclassified.length,
+    activeSummary: {
+      total: activeIncidents.length + safety,
+      escalated: activeIncidents.filter((item) => item.result === "escalated" || item.result === "unclassified").length,
+      stopped: activeIncidents.filter((item) => item.result === "stopped").length,
+      safety,
+    },
+    activeIncidents,
+    unclassified,
     priorities: [...priorities.values()].sort((a, b) => b.score - a.score || b.count - a.count).slice(0, 5),
-    recent: all.slice(0, 8),
+    recent: all.slice(0, 10),
   };
 };
 
@@ -91,87 +161,99 @@ export async function refreshDashboard(): Promise<DashboardData> {
   }
 }
 
-export async function saveIncident(input: IncidentInput, scenarioTitle: string, areaName: string): Promise<void> {
-  const saveLocal = () => {
-    const stored = readLocal<RecentIncident[]>(INCIDENT_KEY, []);
-    stored.unshift({
+export async function saveIncident(input: IncidentInput, scenarioTitle: string, areaName: string): Promise<SavedIncident> {
+  const saveLocal = (): SavedIncident => {
+    const occurredAt = new Date(input.occurredAt).toISOString();
+    const now = new Date().toISOString();
+    const status = input.result === "resolved" ? "resolved" : "open";
+    const saved: IncidentRecord = {
       id: `local-${Date.now()}`,
-      occurredAt: new Date().toISOString(),
+      occurredAt,
       areaName,
       scenarioTitle,
       result: input.result,
       severity: input.severity,
-      durationSeconds: input.durationSeconds,
+      status,
+      triageSeconds: input.triageSeconds,
+      recoverySeconds: status === "resolved" ? Math.max(input.triageSeconds, Math.round((Date.now() - new Date(occurredAt).getTime()) / 1000)) : null,
+      recoveredAt: status === "resolved" ? now : null,
       recurrence: input.recurrence,
-    });
-    writeLocal(INCIDENT_KEY, stored.slice(0, 50));
+      note: input.note,
+      routeSummary: input.steps.map((step) => `${step.prompt} → ${step.choiceLabel}`).join(" / "),
+      resolutionNote: status === "resolved" ? "一次対応で解決" : "",
+    };
+    writeLocal(INCIDENT_KEY, [saved, ...storedIncidents()].slice(0, 100));
+    return { id: saved.id, occurredAt: saved.occurredAt, status: saved.status };
   };
 
-  if (EXPLICIT_DEMO) {
-    saveLocal();
-    return;
-  }
-
+  if (EXPLICIT_DEMO) return saveLocal();
   try {
-    await request<{ id: number }>("incidents", { method: "POST", body: JSON.stringify(input) });
+    return await request<SavedIncident>("incidents", { method: "POST", body: JSON.stringify(input) });
   } catch {
-    saveLocal();
+    return saveLocal();
   }
 }
 
-export async function saveUnclassified(areaId: number, title: string, details: string, safetyConcern: boolean): Promise<void> {
-  const body = { areaId, title, details, safetyConcern };
-  const saveLocal = () => {
-    const stored = readLocal<(typeof body & { id: string; occurredAt: string })[]>(UNCLASSIFIED_KEY, []);
-    stored.unshift({ ...body, id: `local-${Date.now()}`, occurredAt: new Date().toISOString() });
-    writeLocal(UNCLASSIFIED_KEY, stored);
+export async function resolveIncident(id: number | string, resolutionNote: string, source: "mysql" | "demo"): Promise<void> {
+  const resolveLocal = () => {
+    const now = new Date();
+    writeLocal(INCIDENT_KEY, storedIncidents().map((item) => item.id === id ? {
+      ...item,
+      status: "resolved" as const,
+      recoveredAt: now.toISOString(),
+      recoverySeconds: Math.max(1, Math.round((now.getTime() - new Date(item.occurredAt).getTime()) / 1000)),
+      resolutionNote,
+    } : item));
   };
+  if (EXPLICIT_DEMO || source === "demo" || String(id).startsWith("local-")) return resolveLocal();
+  await request<void>("resolve-incident", { method: "POST", body: JSON.stringify({ id, resolutionNote }) });
+}
 
-  if (EXPLICIT_DEMO) {
-    saveLocal();
-    return;
-  }
-
+export async function saveUnclassified(areaId: number, areaName: string, title: string, details: string, safetyConcern: boolean): Promise<UnclassifiedRecord> {
+  const body = { areaId, title, details, safetyConcern };
+  const saveLocal = (): UnclassifiedRecord => {
+    const saved: UnclassifiedRecord = { ...body, areaName, id: `unknown-${Date.now()}`, occurredAt: new Date().toISOString(), status: "new" };
+    writeLocal(UNCLASSIFIED_KEY, [saved, ...storedUnclassified()]);
+    return saved;
+  };
+  if (EXPLICIT_DEMO) return saveLocal();
   try {
-    await request<{ id: number }>("unclassified", { method: "POST", body: JSON.stringify(body) });
+    return await request<UnclassifiedRecord>("unclassified", { method: "POST", body: JSON.stringify(body) });
   } catch {
-    saveLocal();
+    return saveLocal();
   }
+}
+
+export async function closeUnclassified(id: number | string, source: "mysql" | "demo"): Promise<void> {
+  const closeLocal = () => {
+    const stored = storedUnclassified();
+    const target = stored.find((item) => item.id === id) || demoUnclassified.find((item) => item.id === id);
+    if (!target) return;
+    writeLocal(UNCLASSIFIED_KEY, [{ ...target, status: "closed" as const }, ...stored.filter((item) => item.id !== id)]);
+  };
+  if (EXPLICIT_DEMO || source === "demo" || String(id).startsWith("unknown-")) return closeLocal();
+  await request<void>("close-unclassified", { method: "POST", body: JSON.stringify({ id }) });
 }
 
 export async function createScenario(input: NewScenarioInput): Promise<Scenario> {
   const createLocal = () => {
     const id = Date.now();
     const scenario: Scenario = {
-      id,
-      areaId: input.areaId,
-      slug: `custom-${id}`,
-      title: input.title,
-      summary: input.summary,
-      riskLevel: input.riskLevel,
-      version: 1,
-      startNodeKey: "start",
-      estimatedMinutes: 5,
-      custom: true,
+      id, areaId: input.areaId, slug: `custom-${id}`, title: input.title, summary: input.summary,
+      riskLevel: input.riskLevel, version: 1, startNodeKey: "start", estimatedMinutes: 5, custom: true,
       nodes: {
-        start: {
-          key: "start", type: "question", title: input.question, body: "現場で確認できた事実だけをもとに選択します。",
-          choices: [
-            { label: "はい", nextNodeKey: "yes", choiceType: "positive", sortOrder: 1 },
-            { label: "いいえ", nextNodeKey: "no", choiceType: "negative", sortOrder: 2 },
-          ],
-        },
+        start: { key: "start", type: "question", title: input.question, body: "現場で確認できた事実だけをもとに選択します。", choices: [
+          { label: "はい", nextNodeKey: "yes", choiceType: "positive", sortOrder: 1 },
+          { label: "いいえ", nextNodeKey: "no", choiceType: "negative", sortOrder: 2 },
+        ] },
         yes: { key: "yes", type: "outcome", title: input.yesAction, body: "実施内容と結果を記録します。", outcomeType: "resolved", choices: [] },
         no: { key: "no", type: "outcome", title: input.noAction, body: "判断材料をそろえて責任者へ連携します。", outcomeType: "escalated", escalationTarget: input.escalationTarget, choices: [] },
       },
     };
-    const stored = readLocal<Scenario[]>(SCENARIO_KEY, []);
-    writeLocal(SCENARIO_KEY, [scenario, ...stored]);
+    writeLocal(SCENARIO_KEY, [scenario, ...readLocal<Scenario[]>(SCENARIO_KEY, [])]);
     return scenario;
   };
-
   if (EXPLICIT_DEMO) return createLocal();
-
   try {
     return await request<Scenario>("scenarios", { method: "POST", body: JSON.stringify(input) });
   } catch {
@@ -183,6 +265,6 @@ export function resetDemoData(): void {
   try {
     [INCIDENT_KEY, SCENARIO_KEY, UNCLASSIFIED_KEY].forEach((key) => localStorage.removeItem(key));
   } catch {
-    // ブラウザの保存領域が利用できない場合も、画面操作を止めない。
+    // 保存領域が使えなくても初期画面は表示する。
   }
 }

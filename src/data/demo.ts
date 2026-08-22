@@ -1,4 +1,4 @@
-import type { Area, BootstrapData, FlowNode, OutcomeType, RecentIncident, RiskLevel, Scenario } from "../types";
+import type { Area, BootstrapData, FlowNode, IncidentRecord, OutcomeType, RiskLevel, Scenario, UnclassifiedRecord } from "../types";
 
 export const demoAreas: Area[] = [
   { id: 1, slug: "floor", name: "ホール", shortName: "FLOOR", icon: "テ", color: "#ff7b63", description: "注文・提供・お客様対応" },
@@ -110,13 +110,21 @@ export const demoScenarios: Scenario[] = [
   ]),
 ];
 
-const recent: RecentIncident[] = [
-  { id: "d1", occurredAt: "2026-08-22T10:42:00+09:00", areaName: "レジ", scenarioTitle: "POSレジが操作できない", result: "escalated", severity: "medium", durationSeconds: 780, recurrence: true },
-  { id: "d2", occurredAt: "2026-08-22T09:18:00+09:00", areaName: "ホール", scenarioTitle: "注文と違う料理を提供した", result: "resolved", severity: "low", durationSeconds: 310, recurrence: false },
-  { id: "d3", occurredAt: "2026-08-21T19:37:00+09:00", areaName: "キッチン", scenarioTitle: "冷蔵設備に異常表示が出た", result: "stopped", severity: "high", durationSeconds: 1020, recurrence: true },
-  { id: "d4", occurredAt: "2026-08-21T17:04:00+09:00", areaName: "受取口", scenarioTitle: "持ち帰り商品と注文内容が違う", result: "resolved", severity: "low", durationSeconds: 240, recurrence: false },
-  { id: "d5", occurredAt: "2026-08-20T12:26:00+09:00", areaName: "スタッフ", scenarioTitle: "急な欠勤で人員が不足した", result: "escalated", severity: "medium", durationSeconds: 900, recurrence: false },
-  { id: "d6", occurredAt: "2026-08-20T11:13:00+09:00", areaName: "ホール", scenarioTitle: "料理の提供が大幅に遅れている", result: "resolved", severity: "low", durationSeconds: 480, recurrence: true },
+const ago = (hours: number) => new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
+
+const recent: IncidentRecord[] = [
+  { id: "d1", occurredAt: ago(3), areaName: "レジ", scenarioTitle: "POSレジが操作できない", result: "escalated", severity: "medium", status: "resolved", triageSeconds: 95, recoverySeconds: 780, recoveredAt: ago(2.78), recurrence: true, note: "取引履歴と端末状態を確認して保守へ連携", routeSummary: "他の端末は動く → はい / 元端末に完了記録 → はい", resolutionNote: "保守確認後、端末を再起動して復旧" },
+  { id: "d2", occurredAt: ago(5), areaName: "ホール", scenarioTitle: "注文と違う料理を提供した", result: "resolved", severity: "low", status: "resolved", triageSeconds: 58, recoverySeconds: 310, recoveredAt: ago(4.91), recurrence: false, note: "伝票と卓番号を照合", routeSummary: "未飲食 → はい / 作り直し可能 → はい", resolutionNote: "正しい料理を提供" },
+  { id: "d3", occurredAt: ago(18), areaName: "キッチン", scenarioTitle: "冷蔵設備に異常表示が出た", result: "stopped", severity: "high", status: "resolved", triageSeconds: 72, recoverySeconds: 1020, recoveredAt: ago(17.72), recurrence: true, note: "対象商品を区分して設備保守へ連携", routeSummary: "商品影響 → ある・不明 / 使用停止 → 実施した", resolutionNote: "温度安定と保守確認後に使用再開" },
+  { id: "d4", occurredAt: ago(24), areaName: "受取口", scenarioTitle: "持ち帰り商品と注文内容が違う", result: "resolved", severity: "low", status: "resolved", triageSeconds: 44, recoverySeconds: 240, recoveredAt: ago(23.93), recurrence: false, note: "注文番号と袋ラベルを照合", routeSummary: "商品は店舗内 → はい / 入替 → 実施した", resolutionNote: "受渡内容を再確認" },
+  { id: "d5", occurredAt: ago(31), areaName: "スタッフ", scenarioTitle: "急な欠勤で人員が不足した", result: "escalated", severity: "medium", status: "resolved", triageSeconds: 110, recoverySeconds: 900, recoveredAt: ago(30.75), recurrence: false, note: "配置可能業務と混雑見込みを共有", routeSummary: "必須配置 → いいえ", resolutionNote: "責任者判断で制限営業へ切替" },
+  { id: "d6", occurredAt: ago(36), areaName: "ホール", scenarioTitle: "料理の提供が大幅に遅れている", result: "resolved", severity: "low", status: "resolved", triageSeconds: 65, recoverySeconds: 480, recoveredAt: ago(35.86), recurrence: true, note: "厨房の受付履歴を確認", routeSummary: "厨房へ送信済み → はい", resolutionNote: "提供担当を決めて完了" },
+];
+
+export const demoUnclassified: UnclassifiedRecord[] = [
+  { id: "u1", occurredAt: ago(8), areaId: 1, areaName: "ホール", title: "座席移動後に注文が二重表示", details: "卓移動と追加注文の順序を確認する必要あり", safetyConcern: false, status: "new" },
+  { id: "u2", occurredAt: ago(20), areaId: 5, areaName: "受取口", title: "受取番号が呼出画面に出ない", details: "受付済みだが表示だけ反映されない", safetyConcern: false, status: "new" },
+  { id: "u3", occurredAt: ago(29), areaId: 6, areaName: "設備", title: "特定区画だけ照明が点滅", details: "安全確認後に区画を使用停止", safetyConcern: true, status: "new" },
 ];
 
 export const demoBootstrap: BootstrapData = {
@@ -127,14 +135,17 @@ export const demoBootstrap: BootstrapData = {
     total: 18,
     resolvedRate: 61,
     escalationRate: 28,
-    averageMinutes: 9,
+    averageRecoveryMinutes: 11,
     unclassifiedCount: 3,
+    activeSummary: { total: 0, escalated: 0, stopped: 0, safety: 1 },
+    activeIncidents: [],
+    unclassified: demoUnclassified,
     priorities: [
-      { scenarioTitle: "冷蔵設備に異常表示が出た", areaName: "キッチン", count: 3, score: 243 },
-      { scenarioTitle: "POSレジが操作できない", areaName: "レジ", count: 4, score: 154 },
-      { scenarioTitle: "料理の提供が大幅に遅れている", areaName: "ホール", count: 5, score: 112 },
-      { scenarioTitle: "急な欠勤で人員が不足した", areaName: "スタッフ", count: 2, score: 118 },
-      { scenarioTitle: "注文と違う料理を提供した", areaName: "ホール", count: 4, score: 64 },
+      { scenarioTitle: "冷蔵設備に異常表示が出た", areaName: "キッチン", count: 3, score: 243, stoppedCount: 2, repeatCount: 2, averageRecoveryMinutes: 17 },
+      { scenarioTitle: "POSレジが操作できない", areaName: "レジ", count: 4, score: 154, stoppedCount: 1, repeatCount: 2, averageRecoveryMinutes: 13 },
+      { scenarioTitle: "急な欠勤で人員が不足した", areaName: "スタッフ", count: 2, score: 118, stoppedCount: 0, repeatCount: 0, averageRecoveryMinutes: 15 },
+      { scenarioTitle: "料理の提供が大幅に遅れている", areaName: "ホール", count: 5, score: 112, stoppedCount: 0, repeatCount: 3, averageRecoveryMinutes: 8 },
+      { scenarioTitle: "注文と違う料理を提供した", areaName: "ホール", count: 4, score: 64, stoppedCount: 0, repeatCount: 1, averageRecoveryMinutes: 5 },
     ],
     recent,
   },

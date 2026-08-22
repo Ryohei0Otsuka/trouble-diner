@@ -72,18 +72,31 @@ CREATE TABLE IF NOT EXISTS incidents (
   area_id INT UNSIGNED NOT NULL,
   severity ENUM('low','medium','high') NOT NULL DEFAULT 'medium',
   result ENUM('resolved','escalated','stopped','unclassified') NOT NULL,
+  status ENUM('open','resolved') NOT NULL DEFAULT 'resolved',
   recurrence TINYINT(1) NOT NULL DEFAULT 0,
   duration_seconds INT UNSIGNED NOT NULL DEFAULT 1,
+  triage_seconds INT UNSIGNED NOT NULL DEFAULT 1,
+  recovery_seconds INT UNSIGNED NULL,
+  recovered_at TIMESTAMP NULL DEFAULT NULL,
   note TEXT NOT NULL,
+  resolution_note TEXT NOT NULL,
   seed_key VARCHAR(50) NULL,
   occurred_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY uq_incidents_seed (seed_key),
   KEY idx_incidents_scenario (scenario_id),
   KEY idx_incidents_area_date (area_id, occurred_at),
+  KEY idx_incidents_status (status, occurred_at),
   CONSTRAINT fk_incidents_scenario FOREIGN KEY (scenario_id) REFERENCES scenarios(id) ON DELETE SET NULL,
   CONSTRAINT fk_incidents_area FOREIGN KEY (area_id) REFERENCES areas(id)
 ) ENGINE=InnoDB;
+
+-- 旧版から再インポートした場合も、履歴を削除せず列だけ追加します（XAMPP / MariaDB）。
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS status ENUM('open','resolved') NOT NULL DEFAULT 'resolved' AFTER result;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS triage_seconds INT UNSIGNED NOT NULL DEFAULT 1 AFTER duration_seconds;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS recovery_seconds INT UNSIGNED NULL AFTER triage_seconds;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS recovered_at TIMESTAMP NULL DEFAULT NULL AFTER recovery_seconds;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS resolution_note TEXT NOT NULL AFTER note;
 
 CREATE TABLE IF NOT EXISTS incident_steps (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -212,18 +225,18 @@ INSERT INTO flow_choices (node_id, label, next_node_key, choice_type, sort_order
   (1001,'ある・不明','danger','positive',1),(1001,'ない','range','negative',2),(1002,'はい','facility','positive',1),(1002,'いいえ','single','negative',2)
 ON DUPLICATE KEY UPDATE label=VALUES(label), next_node_key=VALUES(next_node_key), choice_type=VALUES(choice_type);
 
-INSERT INTO incidents (scenario_id, area_id, severity, result, recurrence, duration_seconds, note, seed_key, occurred_at) VALUES
-  (3,3,'medium','escalated',1,780,'模擬データ','demo-01','2026-08-22 10:42:00'),
-  (1,1,'low','resolved',0,310,'模擬データ','demo-02','2026-08-22 09:18:00'),
-  (5,2,'high','stopped',1,1020,'模擬データ','demo-03','2026-08-21 19:37:00'),
-  (7,5,'low','resolved',0,240,'模擬データ','demo-04','2026-08-21 17:04:00'),
-  (8,7,'medium','escalated',0,900,'模擬データ','demo-05','2026-08-20 12:26:00'),
-  (2,1,'low','resolved',1,480,'模擬データ','demo-06','2026-08-20 11:13:00'),
-  (3,3,'medium','resolved',0,360,'模擬データ','demo-07','2026-08-19 18:10:00'),
-  (5,2,'high','stopped',0,850,'模擬データ','demo-08','2026-08-19 15:05:00'),
-  (2,1,'low','resolved',1,420,'模擬データ','demo-09','2026-08-18 13:42:00'),
-  (1,1,'low','resolved',0,290,'模擬データ','demo-10','2026-08-18 11:22:00')
-ON DUPLICATE KEY UPDATE scenario_id=VALUES(scenario_id), area_id=VALUES(area_id), severity=VALUES(severity), result=VALUES(result), recurrence=VALUES(recurrence), duration_seconds=VALUES(duration_seconds), occurred_at=VALUES(occurred_at);
+INSERT INTO incidents (scenario_id, area_id, severity, result, status, recurrence, duration_seconds, triage_seconds, recovery_seconds, recovered_at, note, resolution_note, seed_key, occurred_at) VALUES
+  (3,3,'medium','escalated','resolved',1,780,95,780,'2026-08-22 10:55:00','模擬データ','保守確認後、端末を再起動して復旧','demo-01','2026-08-22 10:42:00'),
+  (1,1,'low','resolved','resolved',0,310,58,310,'2026-08-22 09:23:10','模擬データ','正しい料理を提供','demo-02','2026-08-22 09:18:00'),
+  (5,2,'high','stopped','resolved',1,1020,72,1020,'2026-08-21 19:54:00','模擬データ','温度安定と保守確認後に使用再開','demo-03','2026-08-21 19:37:00'),
+  (7,5,'low','resolved','resolved',0,240,44,240,'2026-08-21 17:08:00','模擬データ','受渡内容を再確認','demo-04','2026-08-21 17:04:00'),
+  (8,7,'medium','escalated','resolved',0,900,110,900,'2026-08-20 12:41:00','模擬データ','責任者判断で制限営業へ切替','demo-05','2026-08-20 12:26:00'),
+  (2,1,'low','resolved','resolved',1,480,65,480,'2026-08-20 11:21:00','模擬データ','提供担当を決めて完了','demo-06','2026-08-20 11:13:00'),
+  (3,3,'medium','resolved','resolved',0,360,80,360,'2026-08-19 18:16:00','模擬データ','代替端末で会計完了','demo-07','2026-08-19 18:10:00'),
+  (5,2,'high','stopped','resolved',0,850,70,850,'2026-08-19 15:19:10','模擬データ','設備確認後に使用再開','demo-08','2026-08-19 15:05:00'),
+  (2,1,'low','resolved','resolved',1,420,55,420,'2026-08-18 13:49:00','模擬データ','提供完了','demo-09','2026-08-18 13:42:00'),
+  (1,1,'low','resolved','resolved',0,290,50,290,'2026-08-18 11:26:50','模擬データ','作り直しを提供','demo-10','2026-08-18 11:22:00')
+ON DUPLICATE KEY UPDATE scenario_id=VALUES(scenario_id), area_id=VALUES(area_id), severity=VALUES(severity), result=VALUES(result), status=VALUES(status), recurrence=VALUES(recurrence), duration_seconds=VALUES(duration_seconds), triage_seconds=VALUES(triage_seconds), recovery_seconds=VALUES(recovery_seconds), recovered_at=VALUES(recovered_at), resolution_note=VALUES(resolution_note), occurred_at=VALUES(occurred_at);
 
 INSERT INTO unclassified_reports (area_id, title, details, safety_concern, status, seed_key, occurred_at) VALUES
   (1,'座席移動後に注文が二重表示','卓移動と追加注文の順序を確認する必要あり',0,'new','unknown-01','2026-08-21 20:10:00'),

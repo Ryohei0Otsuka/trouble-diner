@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+date_default_timezone_set('Asia/Tokyo');
 
 require __DIR__ . '/database.php';
 
@@ -65,6 +66,26 @@ function derivedSeverity(string $risk, string $result): string
     return 'low';
 }
 
+function incidentRecord(array $row): array
+{
+    return [
+        'id' => (int)$row['id'],
+        'occurredAt' => $row['occurred_at'],
+        'areaName' => $row['area_name'],
+        'scenarioTitle' => $row['scenario_title'],
+        'result' => $row['result'],
+        'severity' => $row['severity'],
+        'status' => $row['incident_status'],
+        'triageSeconds' => (int)$row['triage_seconds'],
+        'recoverySeconds' => $row['recovery_seconds'] === null ? null : (int)$row['recovery_seconds'],
+        'recoveredAt' => $row['recovered_at'],
+        'recurrence' => (bool)$row['recurrence'],
+        'note' => $row['note'],
+        'routeSummary' => $row['route_summary'],
+        'resolutionNote' => $row['resolution_note'],
+    ];
+}
+
 function dashboard(PDO $pdo): array
 {
     $summary = $pdo->query(
@@ -72,17 +93,38 @@ function dashboard(PDO $pdo): array
             COUNT(*) AS total,
             COALESCE(ROUND(SUM(result = 'resolved') / NULLIF(COUNT(*), 0) * 100), 0) AS resolved_rate,
             COALESCE(ROUND(SUM(result IN ('escalated','stopped','unclassified')) / NULLIF(COUNT(*), 0) * 100), 0) AS escalation_rate,
-            COALESCE(ROUND(AVG(duration_seconds) / 60), 0) AS average_minutes
+            COALESCE(ROUND(AVG(recovery_seconds) / 60), 0) AS average_recovery_minutes
          FROM incidents"
     )->fetch();
 
-    $unclassifiedCount = (int)$pdo->query("SELECT COUNT(*) FROM unclassified_reports WHERE status = 'new'")->fetchColumn();
+    $unclassifiedStmt = $pdo->query(
+        "SELECT u.id, u.area_id, u.title, u.details, u.safety_concern, u.status, u.occurred_at, a.name AS area_name
+         FROM unclassified_reports u
+         INNER JOIN areas a ON a.id = u.area_id
+         WHERE u.status IN ('new','reviewing')
+         ORDER BY u.safety_concern DESC, u.occurred_at DESC, u.id DESC
+         LIMIT 50"
+    );
+    $unclassified = array_map(static fn(array $row): array => [
+        'id' => (int)$row['id'],
+        'occurredAt' => $row['occurred_at'],
+        'areaId' => (int)$row['area_id'],
+        'areaName' => $row['area_name'],
+        'title' => $row['title'],
+        'details' => $row['details'],
+        'safetyConcern' => (bool)$row['safety_concern'],
+        'status' => $row['status'],
+    ], $unclassifiedStmt->fetchAll());
+    $safetyCount = count(array_filter($unclassified, static fn(array $item): bool => $item['safetyConcern']));
 
     $priorityStmt = $pdo->query(
         "SELECT s.title AS scenario_title, a.name AS area_name, COUNT(i.id) AS incident_count,
+            SUM(i.result = 'stopped') AS stopped_count,
+            SUM(i.recurrence = 1) AS repeat_count,
+            COALESCE(ROUND(AVG(i.recovery_seconds) / 60), 0) AS average_recovery_minutes,
             ROUND(SUM(
                 (CASE i.severity WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END)
-                * GREATEST(1, i.duration_seconds / 60)
+                * GREATEST(1, COALESCE(i.recovery_seconds, TIMESTAMPDIFF(SECOND, i.occurred_at, NOW())) / 60)
                 * (CASE WHEN i.recurrence = 1 THEN 1.5 ELSE 1 END)
             )) AS score
          FROM incidents i
@@ -97,34 +139,41 @@ function dashboard(PDO $pdo): array
         'areaName' => $row['area_name'],
         'count' => (int)$row['incident_count'],
         'score' => (int)$row['score'],
+        'stoppedCount' => (int)$row['stopped_count'],
+        'repeatCount' => (int)$row['repeat_count'],
+        'averageRecoveryMinutes' => (int)$row['average_recovery_minutes'],
     ], $priorityStmt->fetchAll());
 
-    $recentStmt = $pdo->query(
+    $incidentSelect =
         "SELECT i.id, i.occurred_at, a.name AS area_name, COALESCE(s.title, '未分類トラブル') AS scenario_title,
-                i.result, i.severity, i.duration_seconds, i.recurrence
+                i.result, i.severity, i.status AS incident_status, i.triage_seconds, i.recovery_seconds,
+                i.recovered_at, i.recurrence, i.note, i.resolution_note,
+                COALESCE((
+                    SELECT GROUP_CONCAT(CONCAT(st.prompt, ' → ', st.choice_label) ORDER BY st.step_order SEPARATOR ' / ')
+                    FROM incident_steps st WHERE st.incident_id = i.id
+                ), '') AS route_summary
          FROM incidents i
          INNER JOIN areas a ON a.id = i.area_id
-         LEFT JOIN scenarios s ON s.id = i.scenario_id
-         ORDER BY i.occurred_at DESC, i.id DESC
-         LIMIT 8"
-    );
-    $recent = array_map(static fn(array $row): array => [
-        'id' => (int)$row['id'],
-        'occurredAt' => $row['occurred_at'],
-        'areaName' => $row['area_name'],
-        'scenarioTitle' => $row['scenario_title'],
-        'result' => $row['result'],
-        'severity' => $row['severity'],
-        'durationSeconds' => (int)$row['duration_seconds'],
-        'recurrence' => (bool)$row['recurrence'],
-    ], $recentStmt->fetchAll());
+         LEFT JOIN scenarios s ON s.id = i.scenario_id";
+    $activeIncidents = array_map('incidentRecord', $pdo->query($incidentSelect . " WHERE i.status = 'open' ORDER BY i.occurred_at ASC, i.id ASC LIMIT 50")->fetchAll());
+    $recent = array_map('incidentRecord', $pdo->query($incidentSelect . " ORDER BY i.occurred_at DESC, i.id DESC LIMIT 10")->fetchAll());
+    $escalatedCount = count(array_filter($activeIncidents, static fn(array $item): bool => in_array($item['result'], ['escalated', 'unclassified'], true)));
+    $stoppedCount = count(array_filter($activeIncidents, static fn(array $item): bool => $item['result'] === 'stopped'));
 
     return [
         'total' => (int)$summary['total'],
         'resolvedRate' => (int)$summary['resolved_rate'],
         'escalationRate' => (int)$summary['escalation_rate'],
-        'averageMinutes' => (int)$summary['average_minutes'],
-        'unclassifiedCount' => $unclassifiedCount,
+        'averageRecoveryMinutes' => (int)$summary['average_recovery_minutes'],
+        'unclassifiedCount' => count($unclassified),
+        'activeSummary' => [
+            'total' => count($activeIncidents) + $safetyCount,
+            'escalated' => $escalatedCount,
+            'stopped' => $stoppedCount,
+            'safety' => $safetyCount,
+        ],
+        'activeIncidents' => $activeIncidents,
+        'unclassified' => $unclassified,
         'priorities' => $priorities,
         'recent' => $recent,
     ];
@@ -203,14 +252,26 @@ function saveIncident(PDO $pdo, array $input): array
         $risk = (string)$scenario['risk_level'];
     }
     $severity = derivedSeverity($risk, $result);
-    $duration = max(1, min(86400, (int)($input['durationSeconds'] ?? 1)));
+    $triage = max(1, min(86400, (int)($input['triageSeconds'] ?? 1)));
+    try {
+        $occurredAt = new DateTimeImmutable((string)($input['occurredAt'] ?? 'now'));
+    } catch (Throwable) {
+        fail('occurredAt が正しくありません。');
+    }
+    $occurredAt = $occurredAt->setTimezone(new DateTimeZone(date_default_timezone_get()));
+    if ($occurredAt->getTimestamp() > time() + 300) fail('発生日時が未来になっています。');
+    $occurredSql = $occurredAt->format('Y-m-d H:i:s');
+    $status = $result === 'resolved' ? 'resolved' : 'open';
+    $recoverySeconds = $status === 'resolved' ? max($triage, time() - $occurredAt->getTimestamp()) : null;
+    $recoveredAt = $status === 'resolved' ? date('Y-m-d H:i:s') : null;
+    $resolutionNote = $status === 'resolved' ? '一次対応で解決' : '';
     $note = mb_substr(trim((string)($input['note'] ?? '')), 0, 2000);
     $steps = is_array($input['steps'] ?? null) ? $input['steps'] : [];
 
     $pdo->beginTransaction();
     try {
-        $stmt = $pdo->prepare('INSERT INTO incidents (scenario_id, area_id, severity, result, recurrence, duration_seconds, note) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $stmt->execute([$scenarioId, $areaId, $severity, $result, !empty($input['recurrence']) ? 1 : 0, $duration, $note]);
+        $stmt = $pdo->prepare('INSERT INTO incidents (scenario_id, area_id, severity, result, status, recurrence, duration_seconds, triage_seconds, recovery_seconds, recovered_at, note, resolution_note, occurred_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmt->execute([$scenarioId, $areaId, $severity, $result, $status, !empty($input['recurrence']) ? 1 : 0, $triage, $triage, $recoverySeconds, $recoveredAt, $note, $resolutionNote, $occurredSql]);
         $incidentId = (int)$pdo->lastInsertId();
 
         $stepStmt = $pdo->prepare('INSERT INTO incident_steps (incident_id, node_key, prompt, choice_label, step_order) VALUES (?, ?, ?, ?, ?)');
@@ -224,7 +285,7 @@ function saveIncident(PDO $pdo, array $input): array
             ]);
         }
         $pdo->commit();
-        return ['id' => $incidentId];
+        return ['id' => $incidentId, 'occurredAt' => $occurredSql, 'status' => $status];
     } catch (Throwable $error) {
         $pdo->rollBack();
         throw $error;
@@ -239,7 +300,46 @@ function saveUnclassified(PDO $pdo, array $input): array
     $details = mb_substr(trim((string)($input['details'] ?? '')), 0, 3000);
     $stmt = $pdo->prepare('INSERT INTO unclassified_reports (area_id, title, details, safety_concern) VALUES (?, ?, ?, ?)');
     $stmt->execute([$areaId, $title, $details, !empty($input['safetyConcern']) ? 1 : 0]);
-    return ['id' => (int)$pdo->lastInsertId()];
+    $reportId = (int)$pdo->lastInsertId();
+    $areaStmt = $pdo->prepare('SELECT name FROM areas WHERE id = ?');
+    $areaStmt->execute([$areaId]);
+    return [
+        'id' => $reportId,
+        'occurredAt' => date('Y-m-d H:i:s'),
+        'areaId' => $areaId,
+        'areaName' => (string)$areaStmt->fetchColumn(),
+        'title' => $title,
+        'details' => $details,
+        'safetyConcern' => !empty($input['safetyConcern']),
+        'status' => 'new',
+    ];
+}
+
+function resolveIncident(PDO $pdo, array $input): array
+{
+    $id = (int)($input['id'] ?? 0);
+    if ($id < 1) fail('id が正しくありません。');
+    $resolutionNote = requiredString($input, 'resolutionNote', 2000);
+    $stmt = $pdo->prepare(
+        "UPDATE incidents
+         SET status = 'resolved', recovered_at = NOW(),
+             recovery_seconds = GREATEST(1, TIMESTAMPDIFF(SECOND, occurred_at, NOW())),
+             resolution_note = ?
+         WHERE id = ? AND status = 'open'"
+    );
+    $stmt->execute([$resolutionNote, $id]);
+    if ($stmt->rowCount() < 1) fail('未復旧の記録が見つかりません。', 404);
+    return ['id' => $id, 'status' => 'resolved'];
+}
+
+function closeUnclassified(PDO $pdo, array $input): array
+{
+    $id = (int)($input['id'] ?? 0);
+    if ($id < 1) fail('id が正しくありません。');
+    $stmt = $pdo->prepare("UPDATE unclassified_reports SET status = 'closed' WHERE id = ? AND status IN ('new','reviewing')");
+    $stmt->execute([$id]);
+    if ($stmt->rowCount() < 1) fail('確認待ちの未分類記録が見つかりません。', 404);
+    return ['id' => $id, 'status' => 'closed'];
 }
 
 function createScenario(PDO $pdo, array $input): array
@@ -250,7 +350,6 @@ function createScenario(PDO $pdo, array $input): array
     $summary = mb_substr(trim((string)($input['summary'] ?? '')), 0, 500);
     $question = requiredString($input, 'question', 500);
     $yesAction = requiredString($input, 'yesAction', 500);
-    $noAction = requiredString($input, 'noAction', 500);
     $target = mb_substr(trim((string)($input['escalationTarget'] ?? '店舗責任者')), 0, 255);
     $risk = in_array($input['riskLevel'] ?? '', ['normal', 'caution', 'critical'], true) ? $input['riskLevel'] : 'normal';
 
@@ -299,7 +398,9 @@ try {
     if ($method === 'GET' && $action === 'bootstrap') respond(bootstrap($pdo));
     if ($method === 'GET' && $action === 'dashboard') respond(dashboard($pdo));
     if ($method === 'POST' && $action === 'incidents') respond(saveIncident($pdo, body()), 201);
+    if ($method === 'POST' && $action === 'resolve-incident') respond(resolveIncident($pdo, body()));
     if ($method === 'POST' && $action === 'unclassified') respond(saveUnclassified($pdo, body()), 201);
+    if ($method === 'POST' && $action === 'close-unclassified') respond(closeUnclassified($pdo, body()));
     if ($method === 'POST' && $action === 'scenarios') respond(createScenario($pdo, body()), 201);
     fail('Endpoint not found.', 404);
 } catch (PDOException $error) {

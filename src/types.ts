@@ -2,6 +2,7 @@ export type RiskLevel = "normal" | "caution" | "critical";
 export type NodeType = "question" | "action" | "outcome";
 export type OutcomeType = "resolved" | "escalated" | "stopped" | "unclassified";
 export type Severity = "low" | "medium" | "high";
+export type IncidentStatus = "open" | "resolved";
 
 export interface Area {
   id: number;
@@ -58,20 +59,41 @@ export interface IncidentInput {
   severity: Severity;
   result: OutcomeType;
   recurrence: boolean;
-  durationSeconds: number;
+  occurredAt: string;
+  triageSeconds: number;
   note: string;
   steps: StepLog[];
 }
 
-export interface RecentIncident {
+export interface SavedIncident {
   id: number | string;
   occurredAt: string;
+  status: IncidentStatus;
+}
+
+export interface IncidentRecord extends SavedIncident {
   areaName: string;
   scenarioTitle: string;
   result: OutcomeType;
   severity: Severity;
-  durationSeconds: number;
+  triageSeconds: number;
+  recoverySeconds: number | null;
+  recoveredAt: string | null;
   recurrence: boolean;
+  note: string;
+  routeSummary: string;
+  resolutionNote: string;
+}
+
+export interface UnclassifiedRecord {
+  id: number | string;
+  occurredAt: string;
+  areaId: number;
+  areaName: string;
+  title: string;
+  details: string;
+  safetyConcern: boolean;
+  status: "new" | "reviewing" | "converted" | "closed";
 }
 
 export interface PriorityItem {
@@ -79,16 +101,27 @@ export interface PriorityItem {
   areaName: string;
   count: number;
   score: number;
+  stoppedCount: number;
+  repeatCount: number;
+  averageRecoveryMinutes: number;
 }
 
 export interface DashboardData {
   total: number;
   resolvedRate: number;
   escalationRate: number;
-  averageMinutes: number;
+  averageRecoveryMinutes: number;
   unclassifiedCount: number;
+  activeSummary: {
+    total: number;
+    escalated: number;
+    stopped: number;
+    safety: number;
+  };
+  activeIncidents: IncidentRecord[];
+  unclassified: UnclassifiedRecord[];
   priorities: PriorityItem[];
-  recent: RecentIncident[];
+  recent: IncidentRecord[];
 }
 
 export interface BootstrapData {
